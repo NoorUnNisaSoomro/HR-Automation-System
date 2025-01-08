@@ -87,6 +87,7 @@ Performance Checking:
 Add and manage employee performance scores. Visualize and export performance data.
 
 **Dependencies**
+
 Streamlit: For building and running the web application.
 
 Pandas: For data manipulation and handling.
