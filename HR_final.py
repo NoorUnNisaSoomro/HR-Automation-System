@@ -4,6 +4,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import PyPDF2
 import datetime
+import matplotlib.pyplot as plt
+import seaborn as sns
 import io
 
 # Helper functions
@@ -39,6 +41,8 @@ if "payroll_data" not in st.session_state:
     st.session_state.payroll_data = []
 if "performance_data" not in st.session_state:
     st.session_state.performance_data = []
+if "interview_data" not in st.session_state:
+    st.session_state.interview_data = []
 
 # Sidebar navigation
 st.sidebar.title("HR Automation System")
@@ -86,7 +90,7 @@ elif options == "Rank Resumes":
                 st.subheader("Ranked Resumes")
                 for i, (name, score) in enumerate(ranked_resumes, start=1):
                     st.write(f"{i}. **{name}** - Similarity Score: {score:.2f}")
-    
+
     if st.button("View Uploaded Resumes"):
         st.subheader("Uploaded Resumes")
         for name, content in st.session_state.resumes.items():
@@ -97,8 +101,7 @@ elif options == "Chatbot":
     st.title("Chatbot")
     chatbot_responses = {
         "hello": "Hi there! How can I assist you today?",
-        # New Q&A responses
-
+        # Add more responses as needed
         "what is the process for applying for parental leave?":
         "To apply for parental leave:\n\n- Visit the Parental Leave Application section in the HR portal.\n- Complete the form and attach any required documents, such as a medical certificate.\n- Submit the application at least [X weeks] in advance.\n\nNeed help? Contact HR Support.",
         
@@ -149,8 +152,9 @@ elif options == "Chatbot":
         
         "how do i escalate compliance concerns?": 
         "Escalate concerns by:\n\n- Submitting a report in the Compliance section of the HR portal.\n- For urgent issues, contact the Compliance Team."
+
     }
-    user_query = st.text_input("Ask the Chatbot (e.g., 'Parental Leave', 'Resignation', 'Policies and Compliance')", key="chatbot_query")
+    user_query = st.text_input("Ask the Chatbot", key="chatbot_query")
     if user_query:
         response = chatbot_responses.get(user_query.lower(), "Sorry, I don't understand that. Please try asking differently or contact HR for support.")
         st.write("Chatbot:", response)
@@ -164,7 +168,17 @@ elif options == "Interview Scheduling":
         interview_time = st.time_input("Select Interview Time")
         submit_schedule = st.form_submit_button("Schedule Interview")
         if submit_schedule:
+            st.session_state.interview_data.append({
+                "Candidate Name": candidate_name,
+                "interview date": interview_date,
+                "interview_time": interview_time
+            })
             st.success(f"Interview scheduled for {candidate_name} on {interview_date} at {interview_time}.")
+    if st.session_state.interview_data:
+        st.subheader("Interview Records")
+        interview_df = pd.DataFrame(st.session_state.interview_data)
+        st.dataframe(interview_df)
+
 
 # Payroll Management
 elif options == "Payroll Management":
@@ -182,11 +196,22 @@ elif options == "Payroll Management":
                 "Total Salary": total_salary
             })
             st.success(f"Payroll added for {employee_name}: Total Salary = ${total_salary:.2f}")
+
     if st.session_state.payroll_data:
         st.subheader("Payroll Records")
-        st.dataframe(pd.DataFrame(st.session_state.payroll_data))
+        payroll_df = pd.DataFrame(st.session_state.payroll_data)
+        st.dataframe(payroll_df)
+
+        # Plot payroll data
+        fig, ax = plt.subplots()
+        sns.barplot(x="Total Salary", y="Employee Name", data=payroll_df, ax=ax)
+        ax.set_title("Employee Payroll Summary")
+        ax.set_xlabel("Total Salary (USD)")
+        ax.set_ylabel("Employee Name")
+        st.pyplot(fig)
+
         if st.button("Export Payroll to CSV"):
-            csv_data = pd.DataFrame(st.session_state.payroll_data).to_csv(index=False)
+            csv_data = payroll_df.to_csv(index=False)
             st.download_button(
                 "Download Payroll CSV",
                 data=csv_data,
@@ -207,11 +232,28 @@ elif options == "Performance Checking":
                 "Performance Score": performance_score
             })
             st.success(f"Performance score added for {employee_name}: Score = {performance_score}")
+
     if st.session_state.performance_data:
         st.subheader("Performance Records")
-        st.dataframe(pd.DataFrame(st.session_state.performance_data))
-        if st.button("Export Performance Data to CSV"):
-            csv_data = pd.DataFrame(st.session_state.performance_data).to_csv(index=False)
+        performance_df = pd.DataFrame(st.session_state.performance_data)
+        st.dataframe(performance_df)
+
+        # Plot performance scores
+        fig, ax = plt.subplots()    
+        sns.lineplot(
+                data=performance_df,
+                x=performance_df.index,  # X-axis: Index (or time if available)
+                y="Performance Score",   # Y-axis: Performance Score
+                marker="o",
+                ax=ax
+            )
+        ax.set_title("Employee Performance Scores")
+        ax.set_xlabel("Performance Score")
+        ax.set_ylabel("Employee Name")
+        st.pyplot(fig)
+
+        if st.button("Export Performance to CSV"):
+            csv_data = performance_df.to_csv(index=False)
             st.download_button(
                 "Download Performance CSV",
                 data=csv_data,
